@@ -1,0 +1,8 @@
+# Node
+node_modules/
+
+# React
+frontend/node_modules/
+
+# Env files
+**/*.env
