@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
-import { toast } from "react-toastify";
+import api from "../../api/axios"; // adjust the path if needed
+
+ import { toast } from "react-toastify";
 
 const auctionSlice = createSlice({
   name: "auction",
@@ -89,8 +90,8 @@ const auctionSlice = createSlice({
 export const getAllAuctionItems = () => async (dispatch) => {
   dispatch(auctionSlice.actions.getAllAuctionItemRequest());
   try {
-    const response = await axios.get(
-      "http://localhost:5000/api/v1/auctionitem/allitems",
+    const response = await api.get(
+      "api/v1/auctionitem/allitems",
       { withCredentials: true }
     );
     dispatch(
@@ -107,8 +108,8 @@ export const getAllAuctionItems = () => async (dispatch) => {
 export const getMyAuctionItems = () => async (dispatch) => {
   dispatch(auctionSlice.actions.getMyAuctionsRequest());
   try {
-    const response = await axios.get(
-      "http://localhost:5000/api/v1/auctionitem/myitems",
+    const response = await api.get(
+      "api/v1/auctionitem/myitems",
       { withCredentials: true }
     );
     dispatch(auctionSlice.actions.getMyAuctionsSuccess(response.data.items));
@@ -123,8 +124,8 @@ export const getMyAuctionItems = () => async (dispatch) => {
 export const getAuctionDetail = (id) => async (dispatch) => {
   dispatch(auctionSlice.actions.getAuctionDetailRequest());
   try {
-    const response = await axios.get(
-      `http://localhost:5000/api/v1/auctionitem/auction/${id}`,
+    const response = await api.get(
+      `api/v1/auctionitem/auction/${id}`,
       { withCredentials: true }
     );
     dispatch(auctionSlice.actions.getAuctionDetailSuccess(response.data));
@@ -139,8 +140,8 @@ export const getAuctionDetail = (id) => async (dispatch) => {
 export const createAuction = (data) => async (dispatch) => {
   dispatch(auctionSlice.actions.createAuctionRequest());
   try {
-    const response = await axios.post(
-      "http://localhost:5000/api/v1/auctionitem/create",
+    const response = await api.post(
+      "api/v1/auctionitem/create",
       data,
       {
         withCredentials: true,
@@ -185,8 +186,8 @@ export const republishAuction = (id, data) => async (dispatch) => {
 export const deleteAuction = (id) => async (dispatch) => {
   dispatch(auctionSlice.actions.deleteAuctionItemRequest());
   try {
-    const response = await axios.delete(
-      `http://localhost:5000/api/v1/auctionitem/delete/${id}`,
+    const response = await api.delete(
+      `api/v1/auctionitem/delete/${id}`,
       {
         withCredentials: true,
       }

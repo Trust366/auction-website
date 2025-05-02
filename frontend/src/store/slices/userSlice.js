@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../api/axios";
+
 import { toast } from "react-toastify";
 
 const userSlice = createSlice({
@@ -90,8 +91,8 @@ const userSlice = createSlice({
 export const register = (data) => async (dispatch) => {
   dispatch(userSlice.actions.registerRequest());
   try {
-    const response = await axios.post(
-      "http://localhost:5000/api/v1/user/register",
+    const response = await api.post(
+      "api/v1/user/register",
       data,
       {
         withCredentials: true,
@@ -111,8 +112,8 @@ export const register = (data) => async (dispatch) => {
 export const login = (data) => async (dispatch) => {
   dispatch(userSlice.actions.loginRequest());
   try {
-    const response = await axios.post(
-      "http://localhost:5000/api/v1/user/login",
+    const response = await api.post(
+      "api/v1/user/login",
       data,
       {
         withCredentials: true,
@@ -131,8 +132,8 @@ export const login = (data) => async (dispatch) => {
 
 export const logout = () => async (dispatch) => {
   try {
-    const response = await axios.get(
-      "http://localhost:5000/api/v1/user/logout",
+    const response = await api.get(
+      "api/v1/user/logout",
       { withCredentials: true }
     );
     dispatch(userSlice.actions.logoutSuccess());
@@ -147,7 +148,7 @@ export const logout = () => async (dispatch) => {
 export const fetchUser = () => async (dispatch) => {
     dispatch(userSlice.actions.fetchUserRequest());
     try {
-      const response = await axios.get("http://localhost:5000/api/v1/user/me", {
+      const response = await api.get("api/v1/user/me", {
         withCredentials: true,
       });
       dispatch(userSlice.actions.fetchUserSuccess(response.data.user));
@@ -164,8 +165,8 @@ export const fetchUser = () => async (dispatch) => {
 export const fetchLeaderboard = () => async (dispatch) => {
   dispatch(userSlice.actions.fetchLeaderboardRequest());
   try {
-    const response = await axios.get(
-      "http://localhost:5000/api/v1/user/leaderboard",
+    const response = await api.get(
+      "api/v1/user/leaderboard",
       {
         withCredentials: true,
       }
