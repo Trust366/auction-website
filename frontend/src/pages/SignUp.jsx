@@ -180,7 +180,7 @@ const SignUp = () => {
                 <input
                   type="text"
                   value={bankAccountName}
-                  placeholder="Bank Account Username"
+                  placeholder="Bank Account Name"
                   onChange={(e) => setBankAccountName(e.target.value)}
                   className="text-[16px] py-2 bg-transparent border-b-[1px] border-b-stone-500 focus:outline-none sm:flex-1"
                   disabled={role === "Bidder"}

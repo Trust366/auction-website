@@ -16,6 +16,7 @@ const app = express()
 config({
     path: "./config/config.env"
 })
+console.log("Allowed Origin:", process.env.FRONTEND_URL);
 
 app.use(cors({
     origin: [process.env.FRONTEND_URL],
