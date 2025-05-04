@@ -8,143 +8,145 @@ import { Bid } from "../models/bidSchema.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { calculateCommission } from "../controllers/commissionController.js";
 
-// Import the necessary environment variables
-
-
 export const endedAuctionCron = () => {
   cron.schedule("*/1 * * * *", async () => {
     const now = new Date();
-    console.log("⏰ Cron for ended auctions running...");
+    console.log("⏰ Cron job started at", now.toISOString());
 
     try {
       const endedAuctions = await Auction.find({
         endTime: { $lt: now },
         commissionCalculated: false,
-      });
+      }).populate("bids"); // Ensure we have bid details
+
+      if (endedAuctions.length === 0) {
+        console.log("✅ No auctions to process right now.");
+        return;
+      }
+
+      console.log(`🔍 Found ${endedAuctions.length} auctions to process.`);
 
       for (const auction of endedAuctions) {
-        console.log(`⚙️ Processing auction: ${auction.title}`);
+        console.log(`⚙️ Processing auction: ${auction.title} (${auction._id})`);
 
         try {
           const commissionAmount = await calculateCommission(auction._id);
-          auction.commissionCalculated = true;
+          console.log(`💰 Commission calculated: ${commissionAmount}`);
 
+          // Sort bids by highest amount
           const highestBid = auction.bids.sort((a, b) => b.amount - a.amount)[0];
 
-if (!highestBid || !highestBid.userId) {
-  console.log(`❗ No valid highest bidder found for auction ID: ${auction._id}`);
-  await auction.save();
-  continue;
-}
-
-const bidder = await User.findById(highestBid.userId);
-
-
-          
-          const auctioneer = await User.findById(auction.createdBy);
-
-          if (!bidder || !auctioneer) {
-            console.log("❗ Bidder or auctioneer not found.");
+          if (!highestBid || !highestBid.userId) {
+            console.log(`❗ No valid highest bidder found for auction ID: ${auction._id}`);
+            auction.commissionCalculated = true;
             await auction.save();
             continue;
           }
 
+          const bidder = await User.findById(highestBid.userId);
+          const auctioneer = await User.findById(auction.createdBy);
+
+          if (!bidder || !auctioneer) {
+            console.log("❗ Bidder or auctioneer not found.");
+            auction.commissionCalculated = true;
+            await auction.save();
+            continue;
+          }
+
+          // Update auction
           auction.highestBidder = bidder._id;
+          auction.commissionCalculated = true;
           await auction.save();
+          console.log("✅ Auction updated with highest bidder and marked as commission calculated.");
 
-          await User.findByIdAndUpdate(
-            bidder._id,
-            {
-              $inc: {
-                moneySpent: highestBidder.amount,
-                auctionsWon: 1,
-              },
+          // Update bidder stats
+          await User.findByIdAndUpdate(bidder._id, {
+            $inc: {
+              moneySpent: highestBid.amount,
+              auctionsWon: 1,
             },
-            { new: true }
-          );
+          });
 
-          await User.findByIdAndUpdate(
-            auctioneer._id,
-            {
-              $inc: {
-                unpaidCommission: commissionAmount,
-              },
+          // Update auctioneer stats
+          await User.findByIdAndUpdate(auctioneer._id, {
+            $inc: {
+              unpaidCommission: commissionAmount,
             },
-            { new: true }
-          );
+          });
 
+          // === Email to auctioneer ===
           const auctioneerSubject = `🎉 Auction ${auction.title} Ended - Commission Details`;
 
           const auctioneerMessage = `
-          Dear ${auctioneer.userName},
+Dear ${auctioneer.userName},
 
-          Congratulations! The auction for **${auction.title}** has ended, and the commission has been calculated.
+Congratulations! The auction for **${auction.title}** has ended, and the commission has been calculated.
 
-          Below are the details for your commission payment:
+**Commission Amount:** ${commissionAmount}
 
-          **Commission Amount:** ${commissionAmount}
+**Platform Account Details:**
+- Account Name: ${process.env.PLATFORM_ACCOUNT_NAME}
+- Email: ${process.env.PLATFORM_ACCOUNT_EMAIL}
+- Bank: ${process.env.PLATFORM_ACCOUNT_BANK}
+- Account Number: ${process.env.PLATFORM_ACCOUNT_NUMBER}
+- Bank Account Name: ${process.env.PLATFORM_ACCOUNT_NAME_BANK}
 
-          **Platform Account Details:**
-          - Account Name: ${process.env.PLATFORM_ACCOUNT_NAME}
-          - Email: ${process.env.PLATFORM_ACCOUNT_EMAIL}
-          - Bank: ${process.env.PLATFORM_ACCOUNT_BANK}
-          - Account Number: ${process.env.PLATFORM_ACCOUNT_NUMBER}
-          - Bank Account Name: ${process.env.PLATFORM_ACCOUNT_NAME_BANK}
+Please process the payment at your earliest convenience.
 
-          Please process the payment at your earliest convenience.
-
-          Best regards,
-          - Trustys Auction Team`;
+Best regards,  
+Trustys Auction Team
+`;
 
           console.log("📧 Sending email to auctioneer:", auctioneer.email);
+          await sendEmail({
+            email: auctioneer.email,
+            subject: auctioneerSubject,
+            message: auctioneerMessage,
+          });
+          console.log("✅ Email sent to auctioneer.");
 
-          try {
-            await sendEmail({ email: auctioneer.email, subject: auctioneerSubject, message: auctioneerMessage });
-            console.log("✅ Email sent successfully to auctioneer.");
-          } catch (emailErr) {
-            console.error("❌ Failed to send email to auctioneer:", emailErr.message || emailErr);
-          }
+          // === Email to bidder ===
+          const paymentDueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toDateString();
 
           const subject = `🎉 Congratulations! You won the auction for ${auction.title}`;
-          const message = `Dear ${bidder.userName},
+          const message = `
+Dear ${bidder.userName},
 
-          Congratulations! You have won the auction for **${auction.title}**.
+Congratulations! You have won the auction for **${auction.title}**.
 
-          Before proceeding for payment, contact your auctioneer at: **${auctioneer.email}**
+Before proceeding with payment, kindly contact the auctioneer: **${auctioneer.email}**
 
-          Please complete your payment using one of the following methods:
+Payment methods:
 
-          . **Bank Transfer**:
-          - Account Name: ${auctioneer.paymentMethods.bankTransfer?.bankAccountName}
-          - Account Number: ${auctioneer.paymentMethods.bankTransfer?.bankAccountNumber}
-          - Bank: ${auctioneer.paymentMethods.bankTransfer?.bankName}
+**Bank Transfer**:
+- Account Name: ${auctioneer.paymentMethods.bankTransfer?.bankAccountName}
+- Account Number: ${auctioneer.paymentMethods.bankTransfer?.bankAccountNumber}
+- Bank: ${auctioneer.paymentMethods.bankTransfer?.bankName}
 
-          **Cash on Delivery (COD)**:
-          - Pay 20% upfront using any method above.
-          - The remaining 80% is paid upon delivery.
+**Cash on Delivery (COD)**:
+- Pay 20% upfront using any method above.
+- Remaining 80% is paid upon delivery.
 
-          Need to see the item condition? Contact: ${auctioneer.email}
+Please complete your payment by **${paymentDueDate}** to confirm your order.
 
-          Make your payment by [Payment Due Date]. Once confirmed, your item will be shipped.
+Thanks for using Trustys Auction!
 
-          Thanks for bidding!
+- Trustys Auction Team
+`;
 
-          - Trustys Auction Team`;
-
-          console.log("📧 Sending email to:", bidder.email);
-
-          try {
-            await sendEmail({ email: bidder.email, subject, message });
-            console.log("✅ Email sent successfully to bidder.");
-          } catch (emailErr) {
-            console.error("❌ Failed to send email:", emailErr.message || emailErr);
-          }
+          console.log("📧 Sending email to bidder:", bidder.email);
+          await sendEmail({
+            email: bidder.email,
+            subject,
+            message,
+          });
+          console.log("✅ Email sent to bidder.");
         } catch (auctionErr) {
-          console.error("❌ Error processing auction:", auctionErr);
+          console.error("❌ Error processing individual auction:", auctionErr.message || auctionErr);
         }
       }
     } catch (cronErr) {
-      console.error("❌ Error running auction cron job:", cronErr);
+      console.error("❌ Error during cron execution:", cronErr.message || cronErr);
     }
   });
 };
