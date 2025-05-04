@@ -29,15 +29,18 @@ export const endedAuctionCron = () => {
           const commissionAmount = await calculateCommission(auction._id);
           auction.commissionCalculated = true;
 
-          const highestBidder = await Bid.findOne({ auctionItem: auction._id }).sort({ amount: -1 });
+          const highestBid = auction.bids.sort((a, b) => b.amount - a.amount)[0];
 
-          if (!highestBidder || !highestBidder.bidder || !highestBidder.bidder.id) {
-            console.log(`❗ No valid highest bidder found for auction ID: ${auction._id}`);
-            await auction.save();
-            continue;
-          }
+if (!highestBid || !highestBid.userId) {
+  console.log(`❗ No valid highest bidder found for auction ID: ${auction._id}`);
+  await auction.save();
+  continue;
+}
 
-          const bidder = await User.findById(highestBidder.bidder.id);
+const bidder = await User.findById(highestBid.userId);
+
+
+          
           const auctioneer = await User.findById(auction.createdBy);
 
           if (!bidder || !auctioneer) {
