@@ -14,7 +14,7 @@ import { endedAuctionCron } from "./automation/endedAuctionCron.js";
 import { verifyCommissionCron } from "./automation/verifyCommissionCron.js";
 const app = express()
 config({
-    path: "./config/config.env"
+    path: "./.env"
 })
 console.log("Allowed Origin:", process.env.FRONTEND_URL);
 

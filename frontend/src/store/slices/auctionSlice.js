@@ -162,8 +162,8 @@ export const createAuction = (data) => async (dispatch) => {
 export const republishAuction = (id, data) => async (dispatch) => {
   dispatch(auctionSlice.actions.republishItemRequest());
   try {
-    const response = await axios.put(
-      `http://localhost:5000/api/v1/auctionitem/item/republish/${id}`,
+    const response = await api.put(
+      `api/v1/auctionitem/item/republish/${id}`,
       data,
       {
         withCredentials: true,

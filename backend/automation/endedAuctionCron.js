@@ -24,7 +24,14 @@ export const endedAuctionCron = () => {
 
       for (const auction of endedAuctions) {
         console.log(`⚙️ Processing auction: ${auction.title}`);
-        console.log(`⏳ Auction "${auction.title}" Ended At: ${auction.endTime.toISOString()}`);
+
+        const auctionEndTime = new Date(auction.endTime);
+        if (isNaN(auctionEndTime)) {
+          console.log(`❌ Invalid endTime for auction: ${auction.title}`, auction.endTime);
+          continue;
+        } else {
+          console.log(`⏳ Auction "${auction.title}" Ended At: ${auctionEndTime.toISOString()}`);
+        }
 
         try {
           const commissionAmount = await calculateCommission(auction._id);

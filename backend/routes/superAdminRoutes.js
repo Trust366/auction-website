@@ -38,7 +38,7 @@ router.get(
 
   
 router.put(
-    "/paymentproofs/status/update/:id",
+    "/paymentproof/status/update/:id",
     isAuthenticated,
     isAuthorized("Super Admin"),
     updateProofStatus
